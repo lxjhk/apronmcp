@@ -6,6 +6,9 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
-fixtures/*.html
+# Captured recon data may contain real student/flight info — never commit it.
+# Only explicitly-named *_sample.* fixtures (synthetic) are allowed.
+tests/fixtures/*
+!tests/fixtures/*_sample.html
 node_modules/
 .playwright/

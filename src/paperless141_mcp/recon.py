@@ -4,11 +4,10 @@ Usage:  python -m paperless141_mcp.recon
 """
 from __future__ import annotations
 import asyncio
-import re
 from pathlib import Path
 from playwright.async_api import async_playwright
 from .config import load_config, Config
-from .session import LOGIN_URL_PATH
+from .session import LOGIN_URL_PATH, submit_login
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
 
@@ -47,10 +46,7 @@ async def run() -> None:
         # 2. Attempt login. If a selector guess is wrong this raises, but the login
         #    capture above is already on disk so the run is still useful.
         try:
-            await page.get_by_label("User ID").fill(cfg.user)
-            await page.get_by_label("Password").fill(cfg.password)
-            await page.get_by_role("button", name=re.compile("log ?in", re.I)).click()
-            await page.wait_for_load_state("networkidle")
+            await submit_login(page, cfg)
         except Exception as e:  # noqa: BLE001 — recon is diagnostic; report and stop cleanly
             await browser.close()
             print(f"Saved login page to {FIXTURE_DIR}/login.html + login.png")

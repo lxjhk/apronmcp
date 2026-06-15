@@ -2,6 +2,13 @@ import pytest
 from paperless141_mcp.config import load_config, ConfigError
 
 
+@pytest.fixture(autouse=True)
+def isolate_from_dotenv(monkeypatch):
+    """Unit tests exercise env-var logic only — never let a real .env file (which
+    exists for local runs) leak credentials into these tests. No-op load_dotenv."""
+    monkeypatch.setattr("paperless141_mcp.config.load_dotenv", lambda *a, **k: None)
+
+
 def test_load_config_reads_env(monkeypatch):
     monkeypatch.setenv("PAPERLESS_USER", "alice")
     monkeypatch.setenv("PAPERLESS_PASS", "secret")

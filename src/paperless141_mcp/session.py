@@ -4,15 +4,21 @@ from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 from .config import Config
 
 LOGIN_URL_PATH = "/mstr7p.aspx"
-# Heuristic: a password input + no app shell means we are on the login page.
+# Heuristic: a password input or the "Please Log In" banner means we are on the login page.
 _LOGIN_MARKER = re.compile(r'type=["\']password["\']', re.IGNORECASE)
+
+
+def looks_like_login_page(html: str) -> bool:
+    """True if `html` is the Paperless141 login page (vs. an authenticated app page)."""
+    return bool(_LOGIN_MARKER.search(html)) or "Please Log In" in html
 
 # Selectors confirmed from the real login page (mstr7p.aspx, classic ASP.NET).
 # The visible "User ID:" / "Password:" labels are NOT wired with <label for>, so
 # label-based selectors do not work — we target the input ids directly.
 _USER_SELECTOR = "#txtUserName"
 _PASS_SELECTOR = "#txtPassword"
-_SUBMIT_SELECTOR = "#ImageButton1"   # ASP.NET ImageButton (type=image), not a <button>
+_SUBMIT_SELECTOR = "#ButtLogin"   # the green "Log In" submit button
+# NOTE: #ImageButton1 is a "show password" toggle, NOT login — do not click it.
 _COOKIE_ACCEPT_SELECTOR = "#BtnAgree"  # cookie-consent "Accept" banner, shown on fresh sessions
 
 
@@ -47,7 +53,7 @@ class SessionManager:
         self._cookies: list[dict] = []
 
     def looks_like_login_page(self, html: str) -> bool:
-        return bool(_LOGIN_MARKER.search(html))
+        return looks_like_login_page(html)
 
     @property
     def cookies(self) -> list[dict]:

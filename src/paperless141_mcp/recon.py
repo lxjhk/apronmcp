@@ -26,23 +26,43 @@ def _scrub(html: str, cfg: Config) -> str:
     return out
 
 
+async def _dump(page, name: str, cfg: Config) -> None:
+    """Save the current page's HTML + a full-page screenshot to fixtures/."""
+    (FIXTURE_DIR / f"{name}.html").write_text(_scrub(await page.content(), cfg))
+    await page.screenshot(path=str(FIXTURE_DIR / f"{name}.png"), full_page=True)
+
+
 async def run() -> None:
     cfg = load_config()
     FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         page = await browser.new_page()
+
+        # 1. Always capture the login page FIRST — even if our login selectors are
+        #    wrong, this lets us read the real field labels and fix them.
         await page.goto(cfg.base_url + LOGIN_URL_PATH, wait_until="networkidle")
-        await page.get_by_label("User ID").fill(cfg.user)
-        await page.get_by_label("Password").fill(cfg.password)
-        await page.get_by_role("button", name=re.compile("log ?in", re.I)).click()
-        await page.wait_for_load_state("networkidle")
+        await _dump(page, "login", cfg)
 
-        # Save the landing page + a screenshot to discover real navigation.
-        (FIXTURE_DIR / "landing.html").write_text(_scrub(await page.content(), cfg))
-        await page.screenshot(path=str(FIXTURE_DIR / "landing.png"), full_page=True)
+        # 2. Attempt login. If a selector guess is wrong this raises, but the login
+        #    capture above is already on disk so the run is still useful.
+        try:
+            await page.get_by_label("User ID").fill(cfg.user)
+            await page.get_by_label("Password").fill(cfg.password)
+            await page.get_by_role("button", name=re.compile("log ?in", re.I)).click()
+            await page.wait_for_load_state("networkidle")
+        except Exception as e:  # noqa: BLE001 — recon is diagnostic; report and stop cleanly
+            await browser.close()
+            print(f"Saved login page to {FIXTURE_DIR}/login.html + login.png")
+            print(f"Login step failed (likely a selector mismatch): {e!r}")
+            print("Open login.html and tell Claude the real field labels/ids so the "
+                  "selectors can be corrected, then re-run.")
+            return
 
-        # Save every in-app link so we can map the navigation surface.
+        # 3. Capture the post-login landing page + screenshot.
+        await _dump(page, "landing", cfg)
+
+        # 4. Save every in-app link so we can map the navigation surface.
         links = await page.eval_on_selector_all(
             "a[href]", "els => els.map(e => ({text: e.innerText.trim(), href: e.href}))"
         )

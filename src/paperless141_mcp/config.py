@@ -20,9 +20,14 @@ def load_config() -> Config:
     load_dotenv()  # load .env if present; real env vars take precedence
     user = os.environ.get("PAPERLESS_USER")
     password = os.environ.get("PAPERLESS_PASS")
-    if not user or not password:
+    missing = [
+        name
+        for name, value in (("PAPERLESS_USER", user), ("PAPERLESS_PASS", password))
+        if not value
+    ]
+    if missing:
         raise ConfigError(
-            "PAPERLESS_USER and PAPERLESS_PASS must be set (see .env.example)."
+            f"Missing required config: {', '.join(missing)} (see .env.example)."
         )
     base_url = os.environ.get("PAPERLESS_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
     return Config(user=user, password=password, base_url=base_url)

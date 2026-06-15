@@ -1,0 +1,36 @@
+<!-- Synthetic fixture mirroring the real mstr7p.aspx scheduler GridView2 time-grid.
+     3 header rows (Reg#, >Type, >Loc) then 30-min time rows. Fake data only.
+     Cell states: free (empty + active __doPostBack link, white), unavailable (* red disabled),
+     booked (colored, disabled, with a label). -->
+<table cellspacing="0" id="ctl00_ContentPlaceHolder1_GridView2" style="border-collapse:collapse;">
+  <tr>
+    <td style="background-color:Beige;">Reg#</td>
+    <td style="background-color:Beige;"><a href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions('x'))">N111AB</a></td>
+    <td style="background-color:Beige;"><a href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions('y'))">N222CD</a></td>
+  </tr>
+  <tr>
+    <td style="background-color:Beige;" align="center">&gt;Type</td>
+    <td style="background-color:Beige;" align="center">C152</td>
+    <td style="background-color:Beige;" align="center">C172S</td>
+  </tr>
+  <tr>
+    <td style="background-color:Beige;" align="center">&gt;Loc</td>
+    <td style="background-color:Beige;" align="center">KPAO</td>
+    <td style="background-color:Beige;" align="center">KSQL</td>
+  </tr>
+  <tr>
+    <td>07:00</td>
+    <td style="color:Linen;background-color:White;"><a href="javascript:__doPostBack('ctl00$ContentPlaceHolder1$GridView2','3$16')" style="color:Linen;"></a></td>
+    <td style="color:Red;background-color:Red;border-style:None;"><a class="aspNetDisabled" style="color:Red;">*</a></td>
+  </tr>
+  <tr>
+    <td>07:30</td>
+    <td style="color:Black;background-color:DarkSeaGreen;border-style:None;"><a class="aspNetDisabled" style="color:Black;">Pilot Doe, Jane</a></td>
+    <td style="color:Linen;background-color:White;"><a href="javascript:__doPostBack('ctl00$ContentPlaceHolder1$GridView2','4$17')" style="color:Linen;"></a></td>
+  </tr>
+  <tr>
+    <td>08:00</td>
+    <td style="color:Black;background-color:Red;border-style:None;" title="This Aircraft is in Maintenance, not available for scheduling"><a class="aspNetDisabled" style="color:Black;">MAINT</a></td>
+    <td style="color:Linen;background-color:White;"><a href="javascript:__doPostBack('ctl00$ContentPlaceHolder1$GridView2','5$18')" style="color:Linen;"></a></td>
+  </tr>
+</table>

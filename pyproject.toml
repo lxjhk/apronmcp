@@ -1,0 +1,23 @@
+[project]
+name = "paperless141-mcp"
+version = "0.1.0"
+description = "Read-only MCP server for the Paperless141 flight-school web app"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.2.0",
+    "playwright>=1.44",
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["src"]

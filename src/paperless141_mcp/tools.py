@@ -1,7 +1,5 @@
 from __future__ import annotations
 from .config import load_config, Config
-from .session import SessionManager
-from .client import Client
 from .browser import BrowserSession
 from .parsers.my_schedule import parse_my_schedule
 from .parsers.account import parse_account
@@ -9,7 +7,6 @@ from .parsers.availability import parse_availability, free_slots_by_resource
 
 # Process-wide singletons (single user, single session — see spec "Out of scope").
 _config: Config | None = None
-_client: Client | None = None
 _browser: BrowserSession | None = None
 
 # Menu postback buttons on the landing page (mstrI.aspx), confirmed via recon.
@@ -23,15 +20,6 @@ def _get_config() -> Config:
     if _config is None:
         _config = load_config()
     return _config
-
-
-def get_client() -> Client:
-    """httpx client for any direct-GET pages (kept from the original hybrid design)."""
-    global _client
-    if _client is None:
-        cfg = _get_config()
-        _client = Client(cfg, SessionManager(cfg))
-    return _client
 
 
 def get_browser() -> BrowserSession:
@@ -64,7 +52,7 @@ async def get_account(limit: int = 50) -> list[dict]:
     """
     html = await get_browser().open_menu(_BTN_ACCOUNT)
     rows = parse_account(html)
-    return rows[:limit] if limit and limit > 0 else rows
+    return rows[:limit] if limit > 0 else rows
 
 
 async def get_aircraft_availability(only_available: bool = True) -> dict:

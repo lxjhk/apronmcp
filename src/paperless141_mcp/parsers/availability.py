@@ -18,7 +18,8 @@ TABLE_ID = "ctl00_ContentPlaceHolder1_GridView2"
 def _classify(cell) -> dict:
     text = cell.get_text(" ", strip=True)
     link = cell.find("a")
-    active_link = bool(link and link.get("href"))
+    # A bookable (free) slot is an empty cell whose anchor fires a real postback.
+    active_link = bool(link and "__doPostBack" in (link.get("href") or ""))
     if text == "*":
         return {"status": "unavailable"}
     if text == "":
@@ -46,7 +47,9 @@ def parse_availability(html: str) -> dict:
     table = soup.find("table", id=TABLE_ID)
     if table is None:
         return {"resources": [], "rows": []}
-    trs = table.find_all("tr")
+    # Only rows belonging directly to this table (allowing a <tbody>), not rows nested
+    # inside cell-level tables.
+    trs = [tr for tr in table.find_all("tr") if tr.find_parent("table") is table]
     if len(trs) < 4:
         return {"resources": [], "rows": []}
 

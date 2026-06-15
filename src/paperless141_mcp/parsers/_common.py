@@ -28,12 +28,14 @@ def parse_labeled_grid(
     table = soup.find("table", id=table_id)
     if table is None:
         return []
-    rows = table.find_all("tr")
+    # Only rows belonging directly to this table (allowing a <tbody>); excludes rows
+    # inside a nested table such as an ASP.NET pager, which would otherwise look like data.
+    rows = [tr for tr in table.find_all("tr") if tr.find_parent("table") is table]
 
     col_index: dict[str, int] = {}
     header_idx: Optional[int] = None
     for i, tr in enumerate(rows):
-        cells = tr.find_all(["th", "td"])
+        cells = tr.find_all(["th", "td"], recursive=False)
         found: dict[str, int] = {}
         for ci, cell in enumerate(cells):
             label = _text(cell)
@@ -50,7 +52,7 @@ def parse_labeled_grid(
     max_idx = max(col_index.values())
     out: list[dict] = []
     for tr in rows[header_idx + 1:]:
-        cells = tr.find_all("td")
+        cells = tr.find_all("td", recursive=False)
         if len(cells) <= max_idx:
             continue
         rec = {key: _text(cells[ci]) for key, ci in col_index.items()}

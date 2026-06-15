@@ -18,9 +18,6 @@ from .session import (
     looks_like_login_page,
 )
 
-# Landing page reached after a successful login; menu buttons live here.
-LANDING_PATH = "/mstrI.aspx"
-
 
 class BrowserSession:
     """A logged-in, reusable Playwright page for the user's own Paperless141 account."""
@@ -44,7 +41,12 @@ class BrowserSession:
         self._pw = await async_playwright().start()
         self._browser = await self._pw.chromium.launch(headless=True)
         self._page = await self._browser.new_page()
-        await self._login()
+        try:
+            await self._login()
+        except Exception:
+            # Don't leak the Chromium process / Playwright driver on a failed login.
+            await self.close()
+            raise
 
     async def _login(self) -> None:
         await self._page.goto(

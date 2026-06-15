@@ -1,8 +1,19 @@
 """FastMCP server entrypoint:  python -m paperless141_mcp.server"""
+from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 from . import tools
 
-mcp = FastMCP("paperless141")
+
+@asynccontextmanager
+async def _lifespan(_app):
+    """Close the persistent browser session when the server shuts down."""
+    try:
+        yield
+    finally:
+        await tools.get_browser().close()
+
+
+mcp = FastMCP("paperless141", lifespan=_lifespan)
 
 
 @mcp.tool()

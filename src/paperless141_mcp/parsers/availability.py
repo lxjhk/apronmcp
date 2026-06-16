@@ -13,6 +13,14 @@ from __future__ import annotations
 from bs4 import BeautifulSoup
 
 TABLE_ID = "ctl00_ContentPlaceHolder1_GridView2"
+DATE_INPUT_ID = "ctl00_ContentPlaceHolder1_DropDate1"
+
+
+def parse_board_date(html: str) -> str | None:
+    """Return the date the scheduler board is currently showing (YYYY-MM-DD), if present."""
+    soup = BeautifulSoup(html, "html.parser")
+    el = soup.find("input", id=DATE_INPUT_ID)
+    return el.get("value") if el else None
 
 
 def _classify(cell) -> dict:

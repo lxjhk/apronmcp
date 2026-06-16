@@ -20,7 +20,7 @@ from .session import (
 
 # The scheduler board's date input (HTML5 date control, ASP.NET autopostback).
 SCHED_DATE_INPUT = "#ctl00_ContentPlaceHolder1_DropDate1"
-_SCHEDULER_BTN = "#ctl00_BtnSched"
+SCHEDULER_BTN = "#ctl00_BtnSched"  # landing-page menu button → scheduler board
 
 # Booking modal (mstr7apop.aspx iframe) field selectors — see docs/superpowers/discovery.
 _BOOK_AC = "#DropAC"
@@ -175,7 +175,7 @@ class BrowserSession:
         and the user checked out on the aircraft, else the booking is silently rejected.
         """
         async with self._lock:
-            await self._open_locked(_SCHEDULER_BTN)
+            await self._open_locked(SCHEDULER_BTN)
             await self._set_scheduler_date(date)
             frame = await self._open_booking_modal()
             opts = await frame.eval_on_selector_all(
@@ -213,6 +213,10 @@ class BrowserSession:
             )
             url = f"{self.config.base_url}/mstr7a.aspx?schednum={schedule_number}"
             await self._page.goto(url, wait_until="networkidle")
+            if looks_like_login_page(await self._page.content()):
+                # Session expired — re-login and reload the detail page once.
+                await self._login()
+                await self._page.goto(url, wait_until="networkidle")
             await self._page.click(_CANCEL_BTN)
             await self._page.wait_for_timeout(2500)
             await self._page.check(checkbox)

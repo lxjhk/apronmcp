@@ -16,7 +16,7 @@ automate access to it.
 | `session_status()` | Whether a logged-in session is currently held. |
 | `get_my_schedule()` | Your reservations: `schedule_number, resource, start, end, pilot, cfi, note`. |
 | `get_account(limit=50)` | Recent transactions: `date, activity_type, amount, tax, comment, balance`. |
-| `get_aircraft_availability(only_available=True)` | Each aircraft and the time slots where it is free (scheduler's current/today view). |
+| `get_aircraft_availability(date=None, only_available=True)` | Each aircraft and the time slots where it is free, for a given date (YYYY-MM-DD; defaults to today). |
 
 All tools are **read-only** — nothing is booked, edited, or deleted.
 
@@ -88,9 +88,6 @@ student/flight data.
 
 ## Known limitations / not yet built
 
-- **Date selection for availability** — `get_aircraft_availability` reads the scheduler's
-  default (today) view. Selecting an arbitrary date requires driving the date filter
-  postback; not yet implemented.
 - **Account pagination** — `get_account` reads only the first page of transactions.
 - **Instructor availability** — the CFI schedule grid (`mstr9.aspx`) is captured during
   recon but not yet exposed as a tool.

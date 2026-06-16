@@ -18,6 +18,9 @@ from .session import (
     looks_like_login_page,
 )
 
+# The scheduler board's date input (HTML5 date control, ASP.NET autopostback).
+SCHED_DATE_INPUT = "#ctl00_ContentPlaceHolder1_DropDate1"
+
 
 class BrowserSession:
     """A logged-in, reusable Playwright page for the user's own Paperless141 account."""
@@ -64,13 +67,36 @@ class BrowserSession:
         Re-logs-in once if the session has expired between calls.
         """
         async with self._lock:
-            await self.start()
-            html = await self._navigate(button_selector)
-            if looks_like_login_page(html):
-                # Session expired — re-login and retry once.
-                await self._login()
-                html = await self._navigate(button_selector)
+            return await self._open_locked(button_selector)
+
+    async def open_scheduler(
+        self, button_selector: str, date: str | None = None
+    ) -> str:
+        """Open the scheduler board, optionally for a specific date (YYYY-MM-DD).
+
+        The date is applied via the board's date input (an ASP.NET autopostback
+        control), all within one held lock so the navigation and date change are atomic.
+        """
+        async with self._lock:
+            html = await self._open_locked(button_selector)
+            if date:
+                html = await self._set_scheduler_date(date)
             return html
+
+    async def _open_locked(self, button_selector: str) -> str:
+        await self.start()
+        html = await self._navigate(button_selector)
+        if looks_like_login_page(html):
+            # Session expired — re-login and retry once.
+            await self._login()
+            html = await self._navigate(button_selector)
+        return html
+
+    async def _set_scheduler_date(self, date: str) -> str:
+        await self._page.fill(SCHED_DATE_INPUT, date)
+        await self._page.dispatch_event(SCHED_DATE_INPUT, "change")
+        await self._page.wait_for_load_state("networkidle")
+        return await self._page.content()
 
     async def _navigate(self, button_selector: str) -> str:
         await self._page.goto(self._landing_url, wait_until="networkidle")

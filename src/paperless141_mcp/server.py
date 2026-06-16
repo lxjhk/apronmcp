@@ -42,13 +42,16 @@ async def get_account(limit: int = 50) -> list[dict]:
 
 
 @mcp.tool()
-async def get_aircraft_availability(only_available: bool = True) -> dict:
-    """Show aircraft availability from the scheduler board (current/today view).
+async def get_aircraft_availability(
+    date: str | None = None, only_available: bool = True
+) -> dict:
+    """Show aircraft availability from the scheduler board for a date.
 
-    Returns each aircraft with the time slots where it is free. Set only_available
-    to False to include fully-booked aircraft as well.
+    date: YYYY-MM-DD (defaults to today if omitted). Returns each aircraft with the
+    time slots where it is free. Set only_available to False to include fully-booked
+    aircraft as well. The returned "date" field reports the board date actually shown.
     """
-    return await tools.get_aircraft_availability(only_available)
+    return await tools.get_aircraft_availability(date, only_available)
 
 
 def main() -> None:

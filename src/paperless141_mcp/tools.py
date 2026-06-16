@@ -1,9 +1,26 @@
 from __future__ import annotations
+from datetime import datetime
 from .config import load_config, Config
 from .browser import BrowserSession
 from .parsers.my_schedule import parse_my_schedule
 from .parsers.account import parse_account
-from .parsers.availability import parse_availability, free_slots_by_resource
+from .parsers.availability import (
+    parse_availability,
+    free_slots_by_resource,
+    parse_board_date,
+)
+
+
+class DateFormatError(ValueError):
+    """Raised when a date argument is not in YYYY-MM-DD format."""
+
+
+def _validate_date(date: str) -> str:
+    """Validate a YYYY-MM-DD date string, returning it normalized; raise on bad input."""
+    try:
+        return datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        raise DateFormatError(f"date must be YYYY-MM-DD, got {date!r}")
 
 # Process-wide singletons (single user, single session — see spec "Out of scope").
 _config: Config | None = None
@@ -55,20 +72,24 @@ async def get_account(limit: int = 50) -> list[dict]:
     return rows[:limit] if limit > 0 else rows
 
 
-async def get_aircraft_availability(only_available: bool = True) -> dict:
-    """Return aircraft availability from the scheduler board.
+async def get_aircraft_availability(
+    date: str | None = None, only_available: bool = True
+) -> dict:
+    """Return aircraft availability from the scheduler board for a given date.
 
-    Shows the scheduler's current default view (today). Each resource lists the time
-    slots where it is free. When ``only_available`` is True (default) resources with no
-    free slots are omitted to keep the response compact.
+    ``date`` is YYYY-MM-DD; when omitted the board's default (today) is used. Each
+    resource lists the time slots where it is free. When ``only_available`` is True
+    (default) resources with no free slots are omitted to keep the response compact.
     """
-    html = await get_browser().open_menu(_BTN_SCHEDULER)
+    if date is not None:
+        date = _validate_date(date)
+    html = await get_browser().open_scheduler(_BTN_SCHEDULER, date)
     parsed = parse_availability(html)
     resources = free_slots_by_resource(parsed)
     if only_available:
         resources = [r for r in resources if r["free_times"]]
     return {
-        "note": "Scheduler's current default view (today). Date selection is not yet supported.",
+        "date": parse_board_date(html),
         "resource_count": len(parsed["resources"]),
         "resources": resources,
     }

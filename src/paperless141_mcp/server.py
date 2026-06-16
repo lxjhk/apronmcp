@@ -54,6 +54,49 @@ async def get_aircraft_availability(
     return await tools.get_aircraft_availability(date, only_available)
 
 
+@mcp.tool()
+async def find_open_slots(date: str, type_or_tail: str | None = None) -> list[dict]:
+    """Find free aircraft time slots on a date (YYYY-MM-DD), optionally filtered by type or tail.
+
+    Use this to turn a vague request into concrete bookable options before create_reservation.
+    """
+    return await tools.find_open_slots(date, type_or_tail)
+
+
+@mcp.tool()
+async def create_reservation(
+    date: str,
+    start: str,
+    end: str,
+    tail: str,
+    cfi: str | None = None,
+    category: str | None = None,
+    note: str | None = None,
+    confirm: bool = False,
+) -> dict:
+    """Create a reservation. Defaults to a PREVIEW (confirm=False, writes nothing).
+
+    Set confirm=True to actually book. date=YYYY-MM-DD, start/end=HH:MM (24h), tail=aircraft
+    (e.g. "15MJ"), cfi="SOLO" or an instructor, category e.g. "Flight". Always preview and
+    confirm the details with the user before calling with confirm=True.
+    """
+    return await tools.create_reservation(
+        date, start, end, tail, cfi, category, note, confirm
+    )
+
+
+@mcp.tool()
+async def cancel_reservation(
+    schedule_number: str, confirm: bool = False, reason: str = "Schedule Error"
+) -> dict:
+    """Cancel ONE reservation by its schedule_number. Defaults to a PREVIEW (confirm=False).
+
+    Set confirm=True to actually cancel. Only ever affects the single given schedule_number.
+    Confirm the specific reservation with the user before calling with confirm=True.
+    """
+    return await tools.cancel_reservation(schedule_number, confirm, reason)
+
+
 def main() -> None:
     mcp.run()  # stdio transport
 

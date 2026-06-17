@@ -20,6 +20,42 @@ from .session import (
 
 # The scheduler board's date input (HTML5 date control, ASP.NET autopostback).
 SCHED_DATE_INPUT = "#ctl00_ContentPlaceHolder1_DropDate1"
+SCHEDULER_BTN = "#ctl00_BtnSched"  # landing-page menu button → scheduler board
+
+# Booking modal (mstr7apop.aspx iframe) field selectors — see docs/superpowers/discovery.
+_BOOK_AC = "#DropAC"
+_BOOK_START_TM = "#DropStartTM"
+_BOOK_END_TM = "#DropEndTM"
+_BOOK_CFI = "#DropCFI"
+_BOOK_CATEGORY = "#DropCategory"
+_BOOK_NOTE = "#txtSchedNote"
+_BOOK_SUBMIT = "#ButtMakeSched"
+
+# Reservation detail page (mstr7a.aspx) cancel controls.
+_CANCEL_BTN = "#ctl00_ContentPlaceHolder1_ButtCancelSched"
+_CANCEL_CONFIRM = "#ctl00_ContentPlaceHolder1_ButtCancelSched0"
+_CANCEL_REASON_TEXT = "#ctl00_ContentPlaceHolder1_txtCancelReason"
+CANCEL_REASON_CHECKBOXES = {
+    "Weather": "#ctl00_ContentPlaceHolder1_ChkCWeather",
+    "Aircraft Maintenance": "#ctl00_ContentPlaceHolder1_ChkCMaint",
+    "Student Cancel": "#ctl00_ContentPlaceHolder1_ChkCStudent",
+    "Schedule Error": "#ctl00_ContentPlaceHolder1_ChkCSchedError",
+    "No Show / No Call": "#ctl00_ContentPlaceHolder1_ChkCNoShow",
+    "Instructor availability": "#ctl00_ContentPlaceHolder1_ChkCInstructor",
+    "Other": "#ctl00_ContentPlaceHolder1_ChkCOther",
+}
+
+# JS to return any rendered free-slot postback href, used only to pop the booking modal.
+_FREE_ANCHOR_JS = (
+    "() => {const a=[...document.querySelectorAll("
+    "'#ctl00_ContentPlaceHolder1_GridView2 a')].find(e=>"
+    "(e.getAttribute('href')||'').includes('__doPostBack') && e.textContent.trim()==='');"
+    "return a ? a.getAttribute('href') : null;}"
+)
+
+
+class BookingError(Exception):
+    """Raised when a create/cancel browser flow cannot be completed."""
 
 
 class BrowserSession:
@@ -97,6 +133,99 @@ class BrowserSession:
         await self._page.dispatch_event(SCHED_DATE_INPUT, "change")
         await self._page.wait_for_load_state("networkidle")
         return await self._page.content()
+
+    def _booking_frame(self):
+        """Return the open booking-modal iframe frame, or None."""
+        return next((f for f in self._page.frames if "mstr7apop" in f.url), None)
+
+    async def _open_booking_modal(self):
+        """Pop the booking modal (mstr7apop.aspx iframe) from the current board; return its frame.
+
+        Any rendered free-slot postback opens the modal — we then set the real aircraft/time,
+        so which slot is clicked does not matter.
+        """
+        href = None
+        for _ in range(8):
+            href = await self._page.evaluate(_FREE_ANCHOR_JS)
+            if href:
+                break
+            await self._page.wait_for_timeout(800)
+        if not href:
+            raise BookingError("no free slot available to open the booking form on this date")
+        await self._page.evaluate(href.replace("javascript:", ""))
+        await self._page.wait_for_timeout(3000)
+        frame = self._booking_frame()
+        if frame is None:
+            raise BookingError("booking modal did not open")
+        return frame
+
+    async def book_slot(
+        self,
+        date: str,
+        start: str,
+        end: str,
+        tail: str,
+        cfi: str | None = None,
+        category: str | None = None,
+        note: str | None = None,
+    ) -> str:
+        """Create a reservation via the booking modal; return the resulting page HTML.
+
+        date=YYYY-MM-DD, start/end=HH:MM (24h). The aircraft+time must be genuinely free
+        and the user checked out on the aircraft, else the booking is silently rejected.
+        """
+        async with self._lock:
+            await self._open_locked(SCHEDULER_BTN)
+            await self._set_scheduler_date(date)
+            frame = await self._open_booking_modal()
+            opts = await frame.eval_on_selector_all(
+                _BOOK_AC + " option", "els => els.map(e => e.textContent.trim())"
+            )
+            ac = next((o for o in opts if o.split()[0] == tail), None)
+            if ac is None:
+                raise BookingError(f"aircraft {tail!r} not found in booking dropdown")
+            await frame.select_option(_BOOK_AC, label=ac)
+            await frame.wait_for_timeout(800)
+            frame = self._booking_frame() or frame  # re-acquire after AC postback
+            await frame.select_option(_BOOK_START_TM, label=start)
+            await frame.select_option(_BOOK_END_TM, label=end)
+            if cfi:
+                await frame.select_option(_BOOK_CFI, label=cfi)
+            if category:
+                await frame.select_option(_BOOK_CATEGORY, label=category)
+            if note is not None:
+                await frame.fill(_BOOK_NOTE, note)
+            await frame.click(_BOOK_SUBMIT)
+            await self._page.wait_for_timeout(4500)
+            return await self._page.content()
+
+    async def cancel_reservation_flow(
+        self, schedule_number: str, reason: str = "Schedule Error"
+    ) -> str:
+        """Delete a reservation by schedule_number; return the resulting page HTML.
+
+        Drives the mstr7a.aspx confirm flow: Delete → tick a reason checkbox → confirm.
+        """
+        async with self._lock:
+            await self.start()
+            checkbox = CANCEL_REASON_CHECKBOXES.get(
+                reason, CANCEL_REASON_CHECKBOXES["Schedule Error"]
+            )
+            url = f"{self.config.base_url}/mstr7a.aspx?schednum={schedule_number}"
+            await self._page.goto(url, wait_until="networkidle")
+            if looks_like_login_page(await self._page.content()):
+                # Session expired — re-login and reload the detail page once.
+                await self._login()
+                await self._page.goto(url, wait_until="networkidle")
+            await self._page.click(_CANCEL_BTN)
+            await self._page.wait_for_timeout(2500)
+            await self._page.check(checkbox)
+            await self._page.wait_for_timeout(1500)
+            if reason == "Other":
+                await self._page.fill(_CANCEL_REASON_TEXT, "Cancelled via MCP")
+            await self._page.click(_CANCEL_CONFIRM)
+            await self._page.wait_for_timeout(4000)
+            return await self._page.content()
 
     async def _navigate(self, button_selector: str) -> str:
         await self._page.goto(self._landing_url, wait_until="networkidle")

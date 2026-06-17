@@ -11,14 +11,30 @@ automate access to it.
 
 ## Tools
 
+### Read-only
+
 | Tool | What it returns |
 |------|-----------------|
 | `session_status()` | Whether a logged-in session is currently held. |
 | `get_my_schedule()` | Your reservations: `schedule_number, resource, start, end, pilot, cfi, note`. |
 | `get_account(limit=50)` | Recent transactions: `date, activity_type, amount, tax, comment, balance`. |
 | `get_aircraft_availability(date=None, only_available=True)` | Each aircraft and the time slots where it is free, for a given date (YYYY-MM-DD; defaults to today). |
+| `find_open_slots(date, type_or_tail=None)` | Free `(reg, type, location, time)` slots for a date, optionally filtered by aircraft type or tail. |
 
-All tools are **read-only** — nothing is booked, edited, or deleted.
+### Write (preview-then-confirm)
+
+| Tool | Behaviour |
+|------|-----------|
+| `create_reservation(date, start, end, tail, cfi=None, category=None, note=None, confirm=False)` | `confirm=False` (default) **previews** only. `confirm=True` books the slot and returns the new `schedule_number`. |
+| `cancel_reservation(schedule_number, confirm=False, reason="Schedule Error")` | `confirm=False` previews. `confirm=True` deletes that one reservation. |
+
+**Write safety model:**
+- Every write tool defaults to `confirm=False` — it describes the intended change and writes nothing. A live write happens only with `confirm=True`.
+- `cancel_reservation` only ever affects the single `schedule_number` you pass — never a list or range.
+- Success is confirmed by re-reading your schedule; the tools never claim a write succeeded that they couldn't verify.
+- A booking is silently rejected by Paperless141 unless the aircraft+time is genuinely free, within operating hours, and you're checked out on the aircraft.
+
+> Modify is not yet implemented (Phase W2).
 
 ## Setup
 
@@ -88,7 +104,10 @@ student/flight data.
 
 ## Known limitations / not yet built
 
+- **Modify reservations** — discovered (`ButModSched` on `mstr7a.aspx`) but not yet built (Phase W2).
 - **Account pagination** — `get_account` reads only the first page of transactions.
 - **Instructor availability** — the CFI schedule grid (`mstr9.aspx`) is captured during
   recon but not yet exposed as a tool.
-- No write operations (booking, edits) — intentionally out of scope.
+- `find_open_slots` depends on the scheduler board's client-side rendering; on some dates the
+  board only renders clickable free cells for a subset of aircraft. `create_reservation` does
+  not rely on this (it sets the aircraft/time directly in the booking modal).

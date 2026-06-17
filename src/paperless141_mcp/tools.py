@@ -1,7 +1,14 @@
 from __future__ import annotations
+import logging
 from datetime import datetime
 from .config import load_config, Config
-from .browser import BrowserSession
+from .browser import BrowserSession, BookingError, SCHEDULER_BTN
+from .writes import (
+    validate_reservation_params,
+    format_create_preview,
+    format_cancel_preview,
+    open_slots_from_board,
+)
 from .parsers.my_schedule import parse_my_schedule
 from .parsers.account import parse_account
 from .parsers.availability import (
@@ -9,6 +16,8 @@ from .parsers.availability import (
     free_slots_by_resource,
     parse_board_date,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DateFormatError(ValueError):
@@ -27,9 +36,9 @@ _config: Config | None = None
 _browser: BrowserSession | None = None
 
 # Menu postback buttons on the landing page (mstrI.aspx), confirmed via recon.
+# (the scheduler button lives in browser.py as SCHEDULER_BTN — imported above.)
 _BTN_MY_SCHEDULE = "#ctl00_BtnSchedMy"
 _BTN_ACCOUNT = "#ctl00_BtnAccount"
-_BTN_SCHEDULER = "#ctl00_BtnSched"
 
 
 def _get_config() -> Config:
@@ -83,7 +92,7 @@ async def get_aircraft_availability(
     """
     if date is not None:
         date = _validate_date(date)
-    html = await get_browser().open_scheduler(_BTN_SCHEDULER, date)
+    html = await get_browser().open_scheduler(SCHEDULER_BTN, date)
     parsed = parse_availability(html)
     resources = free_slots_by_resource(parsed)
     if only_available:
@@ -93,3 +102,78 @@ async def get_aircraft_availability(
         "resource_count": len(parsed["resources"]),
         "resources": resources,
     }
+
+
+async def find_open_slots(date: str, type_or_tail: str | None = None) -> list[dict]:
+    """Return free (reg, type, location, time) slots for a date; optional type/tail filter."""
+    date = _validate_date(date)
+    html = await get_browser().open_scheduler(SCHEDULER_BTN, date)
+    return open_slots_from_board(parse_availability(html), type_or_tail)
+
+
+async def create_reservation(
+    date: str,
+    start: str,
+    end: str,
+    tail: str,
+    cfi: str | None = None,
+    category: str | None = None,
+    note: str | None = None,
+    confirm: bool = False,
+) -> dict:
+    """Create a reservation. With confirm=False (default), returns a preview and writes nothing.
+
+    With confirm=True, books the slot and reports the new schedule_number. Success is
+    confirmed by re-reading the schedule — never assumed.
+    """
+    params = validate_reservation_params(date, start, end, tail)
+    params.update({"cfi": cfi, "category": category, "note": note})
+    if not confirm:
+        return format_create_preview(params)
+    logger.info("create_reservation confirm=True params=%s", params)
+    before = {r["schedule_number"] for r in await get_my_schedule()}
+    try:
+        await get_browser().book_slot(
+            date=params["date"], start=params["start"], end=params["end"],
+            tail=params["tail"], cfi=cfi, category=category, note=note,
+        )
+    except BookingError as e:
+        logger.warning("create_reservation failed: %s", e)
+        return {"action": "create_reservation", "confirmed": True, "ok": False, "error": str(e)}
+    new = [r for r in await get_my_schedule() if r["schedule_number"] not in before]
+    if not new:
+        return {
+            "action": "create_reservation", "confirmed": True, "ok": False,
+            "error": ("booking was not created — the slot may be taken, outside operating "
+                      "hours, or the aircraft may require a checkout you don't have"),
+        }
+    return {
+        "action": "create_reservation", "confirmed": True, "ok": True,
+        "schedule_number": new[0]["schedule_number"], "reservation": new[0],
+    }
+
+
+async def cancel_reservation(
+    schedule_number: str, confirm: bool = False, reason: str = "Schedule Error"
+) -> dict:
+    """Cancel one reservation by schedule_number. With confirm=False (default), previews only.
+
+    Only ever acts on the single given schedule_number. Success is confirmed by re-reading
+    the schedule.
+    """
+    schedule_number = str(schedule_number)
+    match = next(
+        (r for r in await get_my_schedule() if r["schedule_number"] == schedule_number),
+        None,
+    )
+    if match is None:
+        return {"action": "cancel_reservation", "confirmed": False, "ok": False,
+                "error": f"no reservation #{schedule_number} found in your schedule"}
+    if not confirm:
+        return format_cancel_preview(match)
+    logger.info("cancel_reservation confirm=True schedule_number=%s reason=%s",
+                schedule_number, reason)
+    await get_browser().cancel_reservation_flow(schedule_number, reason=reason)
+    gone = all(r["schedule_number"] != schedule_number for r in await get_my_schedule())
+    return {"action": "cancel_reservation", "confirmed": True,
+            "cancelled": gone, "schedule_number": schedule_number}

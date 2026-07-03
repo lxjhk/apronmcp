@@ -1,4 +1,5 @@
 """FastMCP server entrypoint:  python -m apronmcp.server"""
+import os
 from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 from . import tools
@@ -97,8 +98,22 @@ async def cancel_reservation(
     return await tools.cancel_reservation(schedule_number, confirm, reason)
 
 
+def transport_from_env(value: str | None) -> str:
+    """Map APRONMCP_TRANSPORT to a FastMCP transport name (default: stdio)."""
+    if value is None or value == "stdio":
+        return "stdio"
+    if value == "http":
+        return "streamable-http"
+    raise ValueError(f"APRONMCP_TRANSPORT must be 'stdio' or 'http', got {value!r}")
+
+
 def main() -> None:
-    mcp.run()  # stdio transport
+    transport = transport_from_env(os.environ.get("APRONMCP_TRANSPORT"))
+    if transport == "streamable-http":
+        mcp.settings.host = "0.0.0.0"
+        mcp.settings.port = 8000
+        mcp.settings.stateless_http = True  # survives container sleep/wake
+    mcp.run(transport=transport)
 
 
 if __name__ == "__main__":

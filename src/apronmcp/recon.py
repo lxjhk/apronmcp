@@ -1,6 +1,6 @@
 """One-shot reconnaissance: log in, save HTML of key pages to fixtures/ for parser development.
 
-Usage:  python -m paperless141_mcp.recon
+Usage:  python -m apronmcp.recon
 """
 from __future__ import annotations
 import asyncio

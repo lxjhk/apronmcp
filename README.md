@@ -1,13 +1,19 @@
-# paperless141-mcp
+# apronmcp
 
-A read-only [MCP](https://modelcontextprotocol.io) server that exposes your own
+An [MCP](https://modelcontextprotocol.io) server that exposes your own
 **Paperless141** flight-school account (the web app at
-`https://advantage.paperlessfbo.com`) to an MCP client such as Claude.
+`https://advantage.paperlessfbo.com`) to an MCP client such as Claude — check your
+schedule, find open aircraft, and book or cancel reservations in plain language.
 
 Paperless141 has no API, so this server logs into the website with your credentials
 using a headless browser (Playwright) and reads the pages. It only ever automates
 **your own authenticated account** — you must have valid credentials and the right to
 automate access to it.
+
+> **Disclaimer:** apronmcp is an unofficial, community-built tool. It is not
+> affiliated with or endorsed by Paperless141 / PaperlessFBO. Automating your account
+> may be restricted by your flight school's or Paperless141's terms of service —
+> check before using it, and use it at your own risk.
 
 ## Tools
 
@@ -34,7 +40,7 @@ automate access to it.
 - Success is confirmed by re-reading your schedule; the tools never claim a write succeeded that they couldn't verify.
 - A booking is silently rejected by Paperless141 unless the aircraft+time is genuinely free, within operating hours, and you're checked out on the aircraft.
 
-> Modify is not yet implemented (Phase W2).
+> Modify is not yet implemented (Phase W2, in progress).
 
 ## Setup
 
@@ -55,20 +61,21 @@ PAPERLESS_BASE_URL=https://advantage.paperlessfbo.com
 ## Run as an MCP server
 
 ```bash
-python -m paperless141_mcp.server
+apronmcp            # or: python -m apronmcp.server
 ```
 
 ### Register with an MCP client
 
-Add this to your client's MCP server config. Credentials can be supplied via the
-`env` block (shown) or via the `.env` file above.
+Add this to your client's MCP server config (e.g. `claude mcp add` or
+`claude_desktop_config.json`), pointing at the Python environment where you
+installed apronmcp. Credentials can be supplied via the `env` block (shown) or
+via the `.env` file above.
 
 ```json
 {
   "mcpServers": {
-    "paperless141": {
-      "command": "/Users/lxjhk/Desktop/paperless/.venv/bin/python",
-      "args": ["-m", "paperless141_mcp.server"],
+    "apronmcp": {
+      "command": "/path/to/.venv/bin/apronmcp",
       "env": {
         "PAPERLESS_USER": "your_user_id",
         "PAPERLESS_PASS": "your_password"
@@ -111,3 +118,7 @@ student/flight data.
 - `find_open_slots` depends on the scheduler board's client-side rendering; on some dates the
   board only renders clickable free cells for a subset of aircraft. `create_reservation` does
   not rely on this (it sets the aircraft/time directly in the booking modal).
+
+## License
+
+[MIT](LICENSE)

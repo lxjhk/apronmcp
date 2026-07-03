@@ -1,5 +1,5 @@
 import pytest
-from paperless141_mcp.writes import validate_reservation_params, WriteValidationError
+from apronmcp.writes import validate_reservation_params, WriteValidationError
 
 
 def test_valid_params_normalized():
@@ -31,7 +31,7 @@ def test_empty_tail_raises():
         validate_reservation_params(date="2026-09-15", start="14:00", end="16:00", tail="")
 
 
-from paperless141_mcp.writes import format_create_preview, format_cancel_preview
+from apronmcp.writes import format_create_preview, format_cancel_preview
 
 
 def test_create_preview_describes_booking():
@@ -53,7 +53,7 @@ def test_cancel_preview_echoes_reservation():
     assert "700123" in preview["summary"]
 
 
-from paperless141_mcp.writes import open_slots_from_board
+from apronmcp.writes import open_slots_from_board
 
 
 def test_open_slots_filters_and_ranks():

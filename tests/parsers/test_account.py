@@ -1,6 +1,6 @@
 from pathlib import Path
 import pytest
-from paperless141_mcp.parsers.account import parse_account
+from apronmcp.parsers.account import parse_account
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 SAMPLE = FIXTURES / "account_sample.html"

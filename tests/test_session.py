@@ -1,6 +1,6 @@
 import pytest
-from paperless141_mcp.session import SessionManager, LoginError
-from paperless141_mcp.config import Config
+from apronmcp.session import SessionManager, LoginError
+from apronmcp.config import Config
 
 
 def test_is_logged_out_detects_login_page():

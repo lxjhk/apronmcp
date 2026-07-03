@@ -1,0 +1,17 @@
+{
+  "name": "apronmcp",
+  "main": "cloudflare/worker.ts",
+  "compatibility_date": "2026-06-01",
+  "containers": [
+    {
+      "class_name": "ApronContainer",
+      "image": "./Dockerfile",
+      "max_instances": 1,
+      "instance_type": "standard"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "APRON_CONTAINER", "class_name": "ApronContainer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ApronContainer"] }]
+}

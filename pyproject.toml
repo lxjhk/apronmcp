@@ -1,8 +1,18 @@
 [project]
-name = "paperless141-mcp"
+name = "apronmcp"
 version = "0.1.0"
-description = "Read-only MCP server for the Paperless141 flight-school web app"
+description = "MCP server for Paperless141 flight-school accounts: read your schedule, check aircraft availability, and book or cancel reservations"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jason Li" }]
 requires-python = ">=3.11"
+keywords = ["mcp", "aviation", "flight-school", "paperless141", "scheduling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications",
+]
 dependencies = [
     "mcp>=1.2.0",
     "playwright>=1.44",
@@ -11,11 +21,18 @@ dependencies = [
     "python-dotenv>=1.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/lxjhk/apronmcp"
+Issues = "https://github.com/lxjhk/apronmcp/issues"
+
+[project.scripts]
+apronmcp = "apronmcp.server:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]

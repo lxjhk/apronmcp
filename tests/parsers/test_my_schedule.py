@@ -1,6 +1,6 @@
 from pathlib import Path
 import pytest
-from paperless141_mcp.parsers.my_schedule import parse_my_schedule
+from apronmcp.parsers.my_schedule import parse_my_schedule
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 SAMPLE = FIXTURES / "my_schedule_sample.html"

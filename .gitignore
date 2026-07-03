@@ -12,3 +12,4 @@ tests/fixtures/*
 !tests/fixtures/*_sample.html
 node_modules/
 .playwright/
+uv.lock

@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from paperless141_mcp.client import cookies_to_httpx, Client
-from paperless141_mcp.config import Config
-from paperless141_mcp.session import SessionManager
+from apronmcp.client import cookies_to_httpx, Client
+from apronmcp.config import Config
+from apronmcp.session import SessionManager
 
 
 def test_cookies_to_httpx_maps_name_value():
@@ -75,7 +75,7 @@ async def test_client_get_retries_on_session_expiry():
     mock_hc.__aexit__ = AsyncMock(return_value=False)
     mock_hc.get = mock_get
 
-    with patch("paperless141_mcp.client.httpx.AsyncClient", return_value=mock_hc):
+    with patch("apronmcp.client.httpx.AsyncClient", return_value=mock_hc):
         html = await client.get("/some/page")
 
     assert html == APP_HTML

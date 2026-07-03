@@ -1,6 +1,6 @@
 import pytest
-from paperless141_mcp.tools import _validate_date, DateFormatError
-from paperless141_mcp.parsers.availability import parse_board_date
+from apronmcp.tools import _validate_date, DateFormatError
+from apronmcp.parsers.availability import parse_board_date
 
 
 def test_validate_date_accepts_iso():

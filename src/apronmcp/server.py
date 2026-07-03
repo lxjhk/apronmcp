@@ -1,4 +1,4 @@
-"""FastMCP server entrypoint:  python -m paperless141_mcp.server"""
+"""FastMCP server entrypoint:  python -m apronmcp.server"""
 from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 from . import tools
@@ -13,7 +13,7 @@ async def _lifespan(_app):
         await tools.get_browser().close()
 
 
-mcp = FastMCP("paperless141", lifespan=_lifespan)
+mcp = FastMCP("apronmcp", lifespan=_lifespan)
 
 
 @mcp.tool()

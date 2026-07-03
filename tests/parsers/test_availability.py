@@ -1,6 +1,6 @@
 from pathlib import Path
 import pytest
-from paperless141_mcp.parsers.availability import (
+from apronmcp.parsers.availability import (
     parse_availability,
     free_slots_by_resource,
 )

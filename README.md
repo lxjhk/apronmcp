@@ -85,6 +85,42 @@ via the `.env` file above.
 }
 ```
 
+## Deploy your own on Cloudflare (remote MCP)
+
+You can run apronmcp as a remote MCP server on your own Cloudflare account —
+the Python server runs in a [Cloudflare Container](https://developers.cloudflare.com/containers/)
+behind a Worker that requires a bearer token. Your credentials live only in your
+Cloudflare account as secrets. Requires the Workers Paid plan ($5/mo — Containers
+are not on the free tier).
+
+```bash
+git clone https://github.com/lxjhk/apronmcp && cd apronmcp
+npm install
+npx wrangler login
+npx wrangler secret put PAPERLESS_USER
+npx wrangler secret put PAPERLESS_PASS
+openssl rand -hex 32          # generate a token, use it in the next step
+npx wrangler secret put APRONMCP_TOKEN
+npx wrangler deploy
+```
+
+Then register it with your MCP client:
+
+```bash
+claude mcp add --transport http apronmcp \
+  https://apronmcp.<your-subdomain>.workers.dev/mcp \
+  --header "Authorization: Bearer <your APRONMCP_TOKEN>"
+```
+
+Notes:
+
+- The container sleeps after 10 minutes idle; the first call after that takes a
+  few extra seconds (cold start + fresh login).
+- Only one container instance ever runs, so there is never more than one
+  logged-in browser session against your account.
+- claude.ai **web** connectors require OAuth and are not supported by the
+  bearer-token setup; Claude Code and Claude Desktop work.
+
 ## How it works
 
 - **`session.py`** — logs into the ASP.NET form (`mstr7p.aspx`); shared `submit_login()`
